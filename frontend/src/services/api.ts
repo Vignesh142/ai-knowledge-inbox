@@ -8,7 +8,8 @@ import {
   ItemType,
 } from '../types';
 
-const API_HOST = import.meta.env.VITE_API_URL || '';
+const rawHost = import.meta.env.VITE_API_URL || '';
+const API_HOST = rawHost.replace(/\/+$/, '');
 const API_BASE = `${API_HOST}/api/v1`;
 
 export async function fetchItems(params?: {
