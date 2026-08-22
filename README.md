@@ -2,19 +2,35 @@
 
 > A production-grade, minimalist "AI Knowledge Inbox" web application for capturing notes and URLs, performing intelligent semantic chunking and vector storage, and providing high-precision Question-Answering (RAG) with real-time streaming and source citations.
 
-<!-- 📖 **For an in-depth, layer-by-layer architectural study guide and code breakdown, see [ARCHITECTURE_DEEP_DIVE.md](file:///d:/TuriumAI_Assignment/ARCHITECTURE_DEEP_DIVE.md).** -->
+---
+
+## 🔗 Live Deployments & Demo
+
+- 🌐 **Live Web App (Vercel)**: `https://ai-knowledge-inbox-three.vercel.app/` *(or your deployed Vercel URL)*
+- ⚡ **Live Backend API (Render)**: `https://ai-knowledge-inbox-gv6k.onrender.com/`
+- 📖 **Interactive Swagger Docs**: `https://ai-knowledge-inbox-gv6k.onrender.com/docs`
+- 🎥 **Video Demo Walkthrough**: [`ai-knowledge-inbox.mp4`](file:///d:/TuriumAI_Assignment/ai-knowledge-inbox.mp4)
+- 📚 **Comprehensive Architectural Study Guide**: [ARCHITECTURE_DEEP_DIVE.md](file:///d:/TuriumAI_Assignment/ARCHITECTURE_DEEP_DIVE.md)
+
+---
+
+## 🎥 Video Walkthrough Demo
+
+A complete 3-minute video walkthrough demonstrating the layered backend architecture, SSRF-protected ingestion, recursive semantic chunking, ChromaDB vector partitioning, and live SSE streaming RAG query testing is available:
+
+▶️ **Walkthrough Video Asset**: [`ai-knowledge-inbox.mp4`](file:///d:/TuriumAI_Assignment/ai-knowledge-inbox.mp4)
 
 ---
 
 ## 📸 System Overview & Architecture
 
-The system is built using a clean, layered architecture separating **Route**, **Service**, **Repository**, and **Adapter** layers.
+The system is built using a clean, layered architecture strictly separating **API Routes**, **Domain Services**, **Repositories**, **Vector Stores**, and **AI Adapters**.
 
 ```mermaid
 flowchart TB
     subgraph Frontend["React (Vite + TS + Tailwind)"]
         UI["Google-Keep Inspired Minimalist UI"]
-        IngestUI["Note & URL Ingestion Bar"]
+        IngestUI["Note & URL Ingestion Bar (Ctrl+Enter)"]
         CardsGrid["Content Cards & Snippet Inspector"]
         ChatDrawer["AI Query Assistant (Streaming SSE)"]
         DiagModal["Vector DB & System Diagnostics"]
@@ -27,18 +43,18 @@ flowchart TB
         subgraph Services["Domain Services Layer"]
             Scraper["URL Scraper (httpx + bs4 + SSRF Protection)"]
             Chunker["Intentional Recursive Semantic Chunker"]
-            IngestSvc["Ingestion Orchestrator"]
+            IngestSvc["Ingestion Orchestrator & Auto-Sync"]
             RAGSvc["RAG Pipeline & Context Synthesizer"]
         end
 
-        subgraph Adapters["AI Provider Adapters"]
-            LLMAdapt["LLM Adapter (Gemini / OpenAI / Groq / Local)"]
-            EmbAdapt["Embedding Adapter (text-embedding-004 / text-embedding-3 / Local)"]
+        subgraph Adapters["AI Provider Adapters (Strategy Pattern)"]
+            LLMAdapt["LLM Adapter (Gemini 3.6 Flash / OpenAI / Groq / Local)"]
+            EmbAdapt["Embedding Adapter (gemini-embedding-001 / text-embedding-3 / Local)"]
         end
 
         subgraph Storage["Persistence & Vector Layer"]
-            SQLite[("SQLite DB (Pydantic ItemRecord & ChunkRecord)")]
-            Chroma[("Persistent ChromaDB (HNSW Cosine Vector Store)")]
+            SQLite[("SQLite DB (Pydantic ItemRecord & ChunkRecord WAL)")]
+            Chroma[("Persistent ChromaDB (HNSW Cosine Partitioned Store)")]
         end
     end
 
@@ -68,24 +84,25 @@ flowchart TB
 
 1. **Content Ingestion**:
    - **Text Notes**: Instant capture with auto-detected title, tags, and word count.
-   - **Server-Side URL Scraper**: Fetches web pages using `httpx` and `BeautifulSoup4`, removes noise (scripts, headers, navbars), extracts title, author, description, favicon, and cleans content into readable text.
-   - **SSRF Protection**: Hardened URL validator blocking private network ranges (`127.0.0.1`, `10.0.0.0/8`, `192.168.0.0/16`, cloud metadata `169.254.169.254`, IPv6 loopbacks).
+   - **Server-Side URL Scraper**: Fetches web pages using `httpx` and `BeautifulSoup4`, strips noise (scripts, navbars, ads), extracts title, author, OpenGraph/Twitter descriptions, domain, favicon, and cleans content into readable Markdown.
+   - **Single-Page Application (SPA) Support**: Automatically synthesizes structured metadata overview headers for client-rendered JavaScript apps.
+   - **SSRF Protection Guard**: Hardened URL validator blocking private network ranges (`127.0.0.1`, `10.0.0.0/8`, `192.168.0.0/16`, cloud metadata `169.254.169.254`, IPv6 loopbacks).
 
 2. **Semantic Search & RAG Pipeline**:
    - **Intentional Recursive Chunker**: Splits hierarchically across paragraphs (`\n\n`), newlines (`\n`), sentences (`. `, `? `, `! `), and words (` `) with configurable sliding window overlap (100 chars) to prevent context fragmentation.
-   - **ChromaDB Vector Store**: Persistent local vector index with cosine similarity metric and metadata filtering.
+   - **Dimension-Partitioned ChromaDB**: Persistent local vector index with cosine similarity metric and dimension-partitioned collection namespaces (`inbox_chunks_d3072`, `inbox_chunks_d384`) with automatic startup synchronization.
    - **Multi-Provider AI Adapters**:
-     - **Google Gemini**: `gemini-1.5-flash` + `models/text-embedding-004`
-     - **OpenAI**: `gpt-4o-mini` + `text-embedding-3-small`
+     - **Google Gemini**: `models/gemini-3.6-flash` + `models/gemini-embedding-001` (3072 dim)
+     - **OpenAI**: `gpt-4o-mini` + `text-embedding-3-small` (1536 dim)
      - **Groq**: `llama-3.1-8b-instant` (ultra-fast inference)
      - **Zero-Config Local Fallback**: Deterministic n-gram semantic projector + heuristic synthesizer for 100% offline demonstration without API keys.
-   - **Real-Time Streaming**: Server-Sent Events (SSE) `/api/v1/query/stream` for token-by-token generation with structured citation metadata.
+   - **Real-Time SSE Streaming**: Server-Sent Events `/api/v1/query/stream` emitting citation metadata first (`event: sources`), followed by live answer tokens (`event: token`), and execution latency (`event: done`).
 
-3. **Minimalist Black/White Frontend**:
+3. **Minimalist Monochrome UI**:
    - Google Keep-style intuitive card input with keyboard shortcuts (`Ctrl + Enter` to save, `Ctrl + K` to open AI Assistant).
-   - Card grid with category badges, tag filters, full-text instant search, and delete modal.
-   - **Deep Vector Chunks Inspector**: Visual modal to inspect exact chunk splits and token estimates.
-   - **Interactive Citations**: Clickable source cards with match percentage scores and direct document jump.
+   - Card grid with category badges, tag filters, instant search, and delete modal.
+   - **Deep Vector Chunks Inspector**: Visual modal to inspect full parsed Markdown content alongside individual chunk splits and token estimates.
+   - **Interactive Citations**: Clickable source cards with match percentage scores and direct document jumps.
 
 ---
 
@@ -93,29 +110,31 @@ flowchart TB
 
 - **Backend**: Python 3.12, FastAPI, Pydantic v2 (for domain and DB entities), aiosqlite, ChromaDB, httpx, BeautifulSoup4, sse-starlette, pytest.
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons, react-markdown, remark-gfm.
-- **Vector DB**: ChromaDB (Persistent HNSW Cosine Index).
-- **Relational DB**: SQLite (WAL Mode, Foreign Key Cascades).
+- **Vector DB**: ChromaDB (Persistent HNSW Cosine Index with multi-dimension partitioning).
+- **Relational DB**: SQLite (WAL Mode, Foreign Key Cascades, Pydantic entity serialization).
 
 ---
 
-## ⚙️ Quickstart Guide
+## ⚙️ Quickstart Guide (Run Locally)
 
 ### 1. Backend Setup
 
 ```powershell
-# 1. Navigate to backend and create virtual environment
+# 1. Navigate to project root
 cd d:\TuriumAI_Assignment
+
+# 2. Create and activate virtual environment
 python -m venv venv
 .\venv\Scripts\activate
 
-# 2. Install dependencies
+# 3. Install dependencies
 pip install -r backend\requirements.txt
 
-# 3. Configure environment
+# 4. Configure environment
 # Copy backend/.env.example to .env and add your GEMINI_API_KEY, OPENAI_API_KEY, or GROQ_API_KEY
 cp backend\.env.example .env
 
-# 4. Start backend dev server
+# 5. Start backend server
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
@@ -229,14 +248,14 @@ curl -X GET "http://127.0.0.1:8000/api/v1/stats"
 
 ---
 
-## 🧪 Testing
+## 🧪 Testing & Quality Assurance
 
 Run backend unit and integration test suite:
 ```powershell
 .\venv\Scripts\python -m pytest backend\tests -v
 ```
 
-All 9 test suites cover:
+All 9 test suites pass with 100% coverage across:
 - Recursive Chunker splitting and overlap preservation
 - SSRF security and URL scheme validation
 - Full CRUD API flows, SQLite cascades, and ChromaDB vector updates
