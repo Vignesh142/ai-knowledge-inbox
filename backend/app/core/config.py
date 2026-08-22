@@ -15,9 +15,9 @@ class Settings(BaseSettings):
     )
 
     # Storage Paths
-    DATA_DIR: str = "./data"
-    DB_PATH: str = "./data/knowledge_inbox.db"
-    CHROMA_PERSIST_DIR: str = "./data/chroma"
+    DATA_DIR: str = "/tmp/data" if (os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME")) else "./data"
+    DB_PATH: str = "/tmp/data/knowledge_inbox.db" if (os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME")) else "./data/knowledge_inbox.db"
+    CHROMA_PERSIST_DIR: str = "/tmp/data/chroma" if (os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME")) else "./data/chroma"
 
     # AI Providers Configuration
     LLM_PROVIDER: str = "auto"          # "openai", "gemini", "groq", "local", "auto"
