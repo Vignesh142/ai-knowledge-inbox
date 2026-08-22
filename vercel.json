@@ -1,11 +1,17 @@
 {
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
   "services": {
     "frontend": {
       "root": "frontend",
-      "framework": "vite"
+      "framework": "vite",
+      "buildCommand": "npm run build",
+      "installCommand": "npm install",
+      "outputDirectory": "dist"
     },
     "backend": {
-      "root": "backend"
+      "root": "backend",
+      "installCommand": "pip install -r requirements.txt"
     }
   },
   "rewrites": [
